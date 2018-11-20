@@ -18,7 +18,10 @@ def cleanup(fn):
     print("Exception on clean up: %s" % str(e), file=sys.stderr)
     return
 
+PRINTER="HP_ColorLaserJet_M253-M254"
+
 def upload():
+  global PRINTER
   form = cgi.FieldStorage()
   # Get filename here.
   fileitem = form['pdffile']
@@ -36,13 +39,15 @@ def upload():
       cleanup(fn)
       return
 
+    opts = []
+    message = ""
+
     format = check_output(["pdfinfo", fn], stderr=FNULL)
     if not "595.276 x 841.861 pts (A4)" in format:
-      mistake("Not an A4 format")
-      cleanup(fn)
-      return
+      opts += ["-o", "fit-to-page"]
+      message += "Not an A4 format, will be scaled to fit.<br>"
 
-    printed = check_output(["lp", "-d", "HP_ColorLaserJet_M253-M254", fn], stderr=FNULL)
+    printed = check_output(["lp"] + opts + ["-d", PRINTER, fn], stderr=FNULL)
     if not "request id is" in printed:
       mistake("Could not print, please, contact administrator")
       cleanup(fn)
@@ -50,7 +55,7 @@ def upload():
     else:
       sleep(3)
 
-    done("The document is in the print queue!")
+    done("The document is in the print queue!", message)
     cleanup(fn)
     return
   else:
@@ -62,7 +67,7 @@ def endoutput():
   print("\n\n\n")
   sys.stdout.flush()
 
-def done(message):
+def done(message, m2 = ""):
   print ("""\
   Content-Type: text/html\n
   <html>
@@ -71,8 +76,9 @@ def done(message):
   </head>
   <body>
      <h3>%s</h3>
+     <p>%s</p>
   </body>
-  </html>""" % message)
+  </html>""" % (message, m2))
   endoutput()
 
 def mistake(message):
