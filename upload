@@ -1,0 +1,98 @@
+#!/usr/bin/python
+from __future__ import print_function
+from subprocess import check_output
+import cgi, os
+import cgitb; cgitb.enable()
+import sys
+import string
+import random
+from time import sleep
+
+def id_gen(size=6, chars=string.ascii_uppercase + string.digits):
+  return ''.join(random.choice(chars) for _ in range(size))
+
+def cleanup(fn):
+  try:
+    os.remove(fn)
+  except Exception as e:
+    print("Exception on clean up: %s" % str(e), file=sys.stderr)
+    return
+
+def upload():
+  form = cgi.FieldStorage()
+  # Get filename here.
+  fileitem = form['pdffile']
+  # Test if the file was uploaded
+  if fileitem.filename:
+    fn = os.path.basename(fileitem.filename)
+    fn = id_gen() + ".pdf"
+    fn = '/tmp/' + fn
+    open(fn, 'wb').write(fileitem.file.read())
+    FNULL = open(os.devnull, 'w')
+    pdf = check_output(["file", fn], stderr=FNULL)
+
+    if not "PDF document" in pdf:
+      mistake("Not a PDF document: %s" % pdf)
+      cleanup(fn)
+      return
+
+    format = check_output(["pdfinfo", fn], stderr=FNULL)
+    if not "595.276 x 841.861 pts (A4)" in format:
+      mistake("Not an A4 format")
+      cleanup(fn)
+      return
+
+    printed = check_output(["lp", "-d", "HP_ColorLaserJet_M253-M254", fn], stderr=FNULL)
+    if not "request id is" in printed:
+      mistake("Could not print, please, contact administrator")
+      cleanup(fn)
+      return
+    else:
+      sleep(3)
+
+    done("The document is in the print queue!")
+    cleanup(fn)
+    return
+  else:
+    message = "Please, select a file to print"
+    mistake(message)
+    return
+
+def endoutput():
+  print("\n\n\n")
+  sys.stdout.flush()
+
+def done(message):
+  print ("""\
+  Content-Type: text/html\n
+  <html>
+  <head>
+    <meta http-equiv="refresh" content="2; url=/"
+  </head>
+  <body>
+     <h3>%s</h3>
+  </body>
+  </html>""" % message)
+  endoutput()
+
+def mistake(message):
+  print ("""\
+  Content-Type: text/html\n
+  <html>
+  <head>
+    <meta http-equiv="refresh" content="2; url=/"
+  </head>
+  <body>
+    <h3>%s</h3> <br>
+    You are being redirected...
+  </body>
+  </html>
+    """ % message)
+  endoutput()
+
+try:
+  upload()
+except Exception as e:
+  mistake("""Something went wrong, sorry 0:-)""")
+  print (str(e), file=sys.stderr)
+
