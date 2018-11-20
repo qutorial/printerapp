@@ -72,7 +72,7 @@ def done(message, m2 = ""):
   Content-Type: text/html\n
   <html>
   <head>
-    <meta http-equiv="refresh" content="2; url=/"
+    <meta http-equiv="refresh" content="4; url=/"
   </head>
   <body>
      <h3>%s</h3>
