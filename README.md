@@ -33,3 +33,5 @@ Installation of additional packages:
 
 ```apt-get install lpr lptools fcgiwrap```
 
+
+Use `lpstat -a` to figure out the printer name and replace it in the upload script.
